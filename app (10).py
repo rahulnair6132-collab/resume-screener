@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import pdfplumber
+from pypdf import PdfReader
 import docx
 import io
 import re
@@ -31,12 +31,10 @@ st.markdown('<p class="main-header">📄 AI Resume Screening Tool</p>', unsafe_a
 
 def extract_text_from_pdf(file):
     try:
+        pdf_reader = PdfReader(file)
         text = ""
-        with pdfplumber.open(file) as pdf:
-            for page in pdf.pages:
-                page_text = page.extract_text()
-                if page_text:
-                    text += page_text + "\n"
+        for page in pdf_reader.pages:
+            text += page.extract_text() + "\n"
         return text
     except Exception as e:
         st.error(f"Error reading PDF: {str(e)}")
