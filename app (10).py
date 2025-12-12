@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
-from PyPDF2 import PdfReader
+try:
+    from PyPDF2 import PdfReader
+except ImportError:
+    from PyPDF2 import PdfFileReader as PdfReader
 import docx
 import io
 import re
@@ -33,8 +36,14 @@ def extract_text_from_pdf(file):
     try:
         pdf_reader = PdfReader(file)
         text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text()
+        # Handle both old and new PyPDF2 API
+        if hasattr(pdf_reader, 'pages'):
+            for page in pdf_reader.pages:
+                text += page.extract_text()
+        else:
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.getPage(page_num)
+                text += page.extractText()
         return text
     except Exception as e:
         st.error(f"Error reading PDF: {str(e)}")
