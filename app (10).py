@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from pypdf import PdfReader
 import docx
 import io
 import re
@@ -12,6 +11,18 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.lib import colors
+
+# Try to import PDF library - if it fails, PDF support will be disabled
+PDF_SUPPORT = False
+try:
+    from pypdf import PdfReader
+    PDF_SUPPORT = True
+except:
+    try:
+        from PyPDF2 import PdfReader
+        PDF_SUPPORT = True
+    except:
+        pass
 
 st.set_page_config(page_title="Resume Screening Tool", page_icon="📄", layout="wide")
 
@@ -30,6 +41,9 @@ st.markdown("""
 st.markdown('<p class="main-header">📄 AI Resume Screening Tool</p>', unsafe_allow_html=True)
 
 def extract_text_from_pdf(file):
+    if not PDF_SUPPORT:
+        st.error("⚠️ PDF support is currently unavailable. Please use DOCX or TXT files instead.")
+        return ""
     try:
         pdf_reader = PdfReader(file)
         text = ""
@@ -246,7 +260,7 @@ with st.sidebar:
     st.header("📋 Instructions")
     st.markdown("""
     1. Enter Job Description
-    2. Upload Resumes (PDF, DOCX, TXT)
+    2. Upload Resumes (DOCX or TXT recommended)
     3. Click 'Analyze Resumes'
     4. Download Results
     
@@ -258,6 +272,10 @@ with st.sidebar:
     - **Experience (15%)**
     - **Technical Skills (15%)**
     """)
+    
+    if not PDF_SUPPORT:
+        st.warning("⚠️ PDF support temporarily unavailable. Please use DOCX or TXT files.")
+    
     st.info("💡 Include specific skills in JD for better matching")
 
 col1, col2 = st.columns([2, 1])
@@ -271,7 +289,14 @@ with col1:
 
 with col2:
     st.subheader("📤 Upload Resumes")
-    uploaded_files = st.file_uploader("Upload resume files", type=['pdf', 'docx', 'txt'],
+    
+    # Adjust file types based on PDF support
+    if PDF_SUPPORT:
+        file_types = ['pdf', 'docx', 'txt']
+    else:
+        file_types = ['docx', 'txt']
+    
+    uploaded_files = st.file_uploader("Upload resume files", type=file_types,
                                      accept_multiple_files=True)
     if uploaded_files:
         st.success(f"✅ {len(uploaded_files)} file(s) uploaded")
@@ -295,14 +320,13 @@ if st.button("🔍 Analyze Resumes", type="primary", use_container_width=True):
             status_text.text(f"Processing: {file.name} ({idx + 1}/{len(uploaded_files)})")
             progress_bar.progress((idx + 1) / len(uploaded_files))
             
+            resume_text = ""
             if file.name.endswith('.pdf'):
                 resume_text = extract_text_from_pdf(file)
             elif file.name.endswith('.docx'):
                 resume_text = extract_text_from_docx(file)
             elif file.name.endswith('.txt'):
                 resume_text = extract_text_from_txt(file)
-            else:
-                continue
             
             if resume_text:
                 results.append(score_resume(jd_text, resume_text, file.name))
@@ -316,7 +340,7 @@ if st.button("🔍 Analyze Resumes", type="primary", use_container_width=True):
             st.session_state['jd_text'] = jd_text
             st.success(f"✅ Successfully analyzed {len(results)} resumes!")
         else:
-            st.error("❌ No valid resumes processed.")
+            st.error("❌ No valid resumes could be processed.")
 
 if 'results_df' in st.session_state:
     results_df = st.session_state['results_df']
