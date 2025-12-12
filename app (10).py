@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import PyPDF2
+import pypdf
 import docx
 import io
 import re
@@ -31,7 +31,7 @@ st.markdown('<p class="main-header">📄 AI Resume Screening Tool</p>', unsafe_a
 
 def extract_text_from_pdf(file):
     try:
-        pdf_reader = PyPDF2.PdfReader(file)
+        pdf_reader = pypdf.PdfReader(file)
         text = ""
         for page in pdf_reader.pages:
             text += page.extract_text()
